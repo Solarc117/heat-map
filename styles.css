@@ -1,0 +1,64 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  width: 100%;
+  height: 100%;
+}
+body {
+  width: 100%;
+  min-height: 100vh;
+  display: grid;
+  /* The idea is that the title and footer will go in the auto rows at the top and bottom, and the middle row will occupy any empty space remaining. */
+  grid-template-rows: auto 1fr auto;
+  font-size: 15px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
+    Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+}
+
+h1,
+h2,
+h3 {
+  margin-top: 5px;
+  margin-left: 10px;
+}
+
+.graph {
+  width: 100%;
+  height: 100vh; /* 100% wouldn't work here, since the parent node's height isn't defined (the body's). */
+  position: relative;
+}
+.graph > .canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.tooltip {
+  position: absolute;
+}
+
+/* .inner-area {
+  position: absolute;
+  border: 1px dashed black;
+  z-index: -1;
+} */
+
+.rect:hover {
+  fill: gold;
+}
+
+.footer {
+  padding: 20px; /* (65 - 15) / 2 */
+  width: 100%;
+  height: 65px;
+  background: hsl(0, 0%, 81%);
+  text-align: center;
+}
+
+a {
+  text-decoration: none;
+  color: rgb(76, 132, 238);
+}
