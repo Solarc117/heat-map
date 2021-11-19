@@ -35,19 +35,60 @@ h3 {
   width: 100%;
   height: 100%;
 }
-
-.tooltip {
+.graph .monthly-var, .legend-rect {
+  cursor: pointer;
+}
+.graph .axis-title {
   position: absolute;
+  fill: black;
+}
+.graph .x-axis,
+.y-axis {
+  font-size: 0.7em;
+}
+.graph .legend-axis {
+  font-size: 0.6em;
+}
+.graph .x,
+.y {
+  font-size: 1.75em;
+}
+.graph .x {
+  transform: translate(55%, 40px);
+}
+.graph .y {
+  transform: rotate(-90deg) translate(-30%, -40px);
+}
+.graph .legend-title {
+  transform: translate(275px, 30px);
 }
 
-/* .inner-area {
+.highlight,
+.legend-rect:hover {
+  fill: rgb(255, 232, 104);
+}
+.click-highlight,
+.monthly-var:hover {
+  fill: rgb(0, 255, 0);
+}
+.tooltip,
+.legend-tooltip {
   position: absolute;
-  border: 1px dashed black;
-  z-index: -1;
-} */
+  background: white;
+  opacity: 0;
+  padding: 5px;
+  border-radius: 5px;
+  border: 1px solid black;
+}
 
-.rect:hover {
-  fill: gold;
+.fade {
+  opacity: 0.5;
+}
+
+.footnote {
+  position: absolute;
+  bottom: 5px;
+  right: 5px;
 }
 
 .footer {
@@ -56,9 +97,4 @@ h3 {
   height: 65px;
   background: hsl(0, 0%, 81%);
   text-align: center;
-}
-
-a {
-  text-decoration: none;
-  color: rgb(76, 132, 238);
 }

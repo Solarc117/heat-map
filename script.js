@@ -1,45 +1,8 @@
 'use strict';
-function log() {
-  console.log(...arguments);
-}
-
-/**
- * @todo Read the open d3-scale repo README.
- * - I think tomorrow, I should focus on reading more of the D3 documentation; there are still so many methods and scales that I do not understand. Some of the problems that I am facing right now have likely BEEN tackled in some of these methods.
- */
-
-/**
- * This time, instead of removing elements that are dynamic, like in the plot chart and GDP graph, I will check if these components EXIST in the document, and if not, I'll add them.
- * Do I think this approach is better?
- * I think I'll find out by trying it out and comparing it first-hand.
- * But I'll make a hypothesis; this way, the axes' space from the edges of the screen will increase, and the user will be able to scroll through, as if they were using a magnifying glass, which I guess is more like what the user wants to do - to literally ZOOM into the visualization, instead of just showing larger figures. So, I mean, it MIGHT be better. I'll see.
- *
- * ALSO, I should probably try to do as much as I can synchronously, and only add code that absolutely requires the data within the d3.json() method.
- * This should in theory make my code more efficient, because why should code that doesn't need data wait for it?
- *
- * @todo Figure out how to render the axes properly:
- * - I was trying to add a div to help me visualize the innerWidth & innerHeight, so I could use that to properly position my axes. You can continue trying to render that div.inner-area correctly (innerWidth seems to extend beyond the screen for some reason), or just place the axes without it.
- * @todo Figure out why there is no scrolling option when you zoom.
- * @todo Render the innerArea div properly.
- * - Maybe I can append the svg to a div instead of the body, and that way I can append things such as legend divs and titles to THAT div instead of the body? This could keep things more organized.
- * @todo Fix the weird vertical gap and overlap beteen some of the rows.
- * I think I figured out what I need to do to solve this! Just change the yScale from timeScale, which has irregular tick distances, to bandScales, which deal with rows and columns comfortably, and render the ticks with a callback function that converts the 'month' number to a date instance.
- * @todo Why does the svg.canvas disappear behind the footer on zoom?
- * One indirect way to fix this would be to add three modes to the graph:
- *  1. To show everything, as it is right now.
- *  2. To show only the first half of the timelapse.
- *  3. To show the latter half of the timelapse.
- *  - I could have a button on top to switch between these three display modes.
- * Add dynamic rect coloring.
- * @todo Add the color legend for the rects.
- * @todo Add the tooltip.
- */
-
-const bodyHeight = document.body.clientHeight;
 
 let { clientWidth: width, clientHeight: height } =
   document.querySelector('.canvas');
-// width *= 1.5;
+
 const padding = {
     top: 25,
     right: 25,
@@ -49,22 +12,57 @@ const padding = {
   innerWidth = width - padding.left - padding.right,
   innerHeight = height - padding.top - padding.bottom;
 
-// A div purely for the purpose of visualizing the innerWidth & innerHeight.
-// d3.select('.graph').append('div').attr('class', 'inner-area');
-// const innerArea = document.querySelector('.inner-area');
-// innerArea.style.width = `${innerWidth}px`;
-// innerArea.style.height = `${innerHeight}px`;
-// innerArea.style.top = `${padding.top}px`;
-// innerArea.style.left = `${padding.left}px`;
-
 const xScale = d3.scaleTime(),
-  yScale = d3.scaleTime();
+  yScale = d3.scaleBand();
 
-const d3svg = d3.select('.canvas');
+const yearFormat = d3.timeFormat('%Y'),
+  monthFormat = d3.timeFormat('%B'),
+  shortMonthFormat = d3.timeFormat('%b');
 
-// Tooltip.
+const d3svg = d3.select('.canvas'),
+  d3graph = d3.select('.graph');
 
-const d3tooltip = d3.select('.graph').append('div').attr('class', 'tooltip');
+d3.select('.graph').append('div').attr('class', 'tooltip');
+const mainTooltip = document.querySelector('.tooltip');
+
+const fadeInKeyframes = [
+    {
+      opacity: 1,
+    },
+  ],
+  fadeOutKeyframes = [
+    {
+      opacity: 0,
+    },
+  ],
+  options = {
+    duration: 500,
+    fill: 'forwards',
+  };
+
+d3.select('.graph').append('div').attr('class', 'legend-tooltip');
+const legendTooltip = document.querySelector('.legend-tooltip');
+
+const colorSchemes = [
+  ['darkblue', 'red'],
+  ['steelblue', 'orangered'],
+  ['hsl(219, 100%, 29%)', 'hsl(0, 100%, 47%)'],
+  ['darkblue', 'tomato'],
+  ['blue', 'red'],
+  ['blue', 'orangered'],
+  ['darkblue', 'crimson'],
+];
+
+function roundHundredth(arg) {
+  if (isNaN(arg) || typeof arg !== 'number')
+    throw `Invalid argument ${arg}, typeof ${arg}`;
+  return Math.round(arg * 100) / 100;
+}
+
+function alertErr(err) {
+  console.error('❌', err);
+  alert(`Something went wrong 😫 please refresh and try again.`);
+}
 
 d3.json(
   'https://raw.githubusercontent.com/freeCodeCamp/ProjectReferenceData/master/global-temperature.json'
@@ -88,31 +86,39 @@ d3.json(
       rectHeight = innerHeight / rows;
 
     monthlyVariance.forEach(instance => {
-      // I turn the month into a Date() instance so I can use the timeFormat method to add the ticks.
       instance.year = new Date(instance.year, 0);
-      instance.month = new Date(1970, instance.month - 1);
+      instance.month--;
     });
 
+    const [minYear, maxYear] = d3.extent(monthlyVariance, instance =>
+        instance.year.getFullYear()
+      ),
+      yearDiff = maxYear - minYear,
+      midYear = maxYear - yearDiff / 2;
+
     xScale.domain(d3.extent(monthlyVariance, instance => instance.year));
+    // Do I really need the rectWidth for the x range?
     xScale.range([padding.left, padding.left + innerWidth - rectWidth]);
 
-    yScale.domain(d3.extent(monthlyVariance, instance => instance.month));
-    yScale.range([
-      padding.top + innerHeight - rectHeight / 2,
-      padding.top + rectHeight / 2,
-    ]);
+    yScale.domain([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+    yScale.range([padding.top + innerHeight, padding.top]);
 
-    const xTickFormat = d3.timeFormat('%Y'),
-      yTickFormat = d3.timeFormat('%b');
+    const xAxis = d3.axisBottom(xScale).tickFormat(yearFormat),
+      yAxis = d3
+        .axisLeft(yScale)
+        .tickFormat(monthIndex => shortMonthFormat(new Date(1970, monthIndex)));
 
-    const xAxis = d3.axisBottom(xScale).tickFormat(xTickFormat),
-      yAxis = d3.axisLeft(yScale).tickFormat(yTickFormat);
-
-    // Legend.
-
-    const legendScale = d3.scaleLinear(
+    // Color scale.
+    const colorScale = d3.scaleLinear(
       d3.extent(monthlyVariance, instance => instance.variance),
-      ['darkblue', 'crimson']
+      // Maybe allow the user to choose from different color schemes, in case of color blindness or just to look cool?
+      // ['darkblue', 'orangered']
+      // ['steelblue', 'orangered']
+      // ['hsl(219, 100%, 29%)', 'hsl(0, 100%, 47%)']
+      // ['darkblue', 'tomato']
+      ['blue', 'red']
+      // ['blue', 'orangered']
+      // ['darkblue', 'crimson']
     );
 
     // Axes.
@@ -120,28 +126,216 @@ d3.json(
       .append('g')
       .attr('class', 'x-axis')
       .attr('transform', `translate(0, ${padding.top + innerHeight + 5})`)
-      .call(xAxis);
+      .call(xAxis)
+      .append('text')
+      .attr('class', 'axis-title x')
+      .text('Year');
+
     d3svg
       .append('g')
       .attr('class', 'y-axis')
       .attr('transform', `translate(${padding.left - 5}, 0)`)
-      .call(yAxis);
+      .call(yAxis)
+      .append('text')
+      .attr('class', 'axis-title y')
+      .text('Month');
 
-    // Rects.
+    // Rects and tooltip.
+    let stickyTooltip = false,
+      fadeOutTimer;
     d3svg
       .selectAll('rect')
       .data(monthlyVariance)
       .enter()
       .append('rect')
       .attr('x', instance => xScale(instance.year))
-      .attr('y', instance => yScale(instance.month) - rectHeight / 2)
+      .attr('y', instance => yScale(instance.month))
       .attr('width', rectWidth)
       .attr('height', rectHeight)
-      .attr('fill', instance => legendScale(instance.variance))
-      .attr('class', 'rect')
-      .on('mouseover', e => {
-        const { variance, month, year } = e.target.__data__;
-        log(variance, month.getMonth() + 1, year.getFullYear());
+      .attr('fill', instance => colorScale(instance.variance))
+      .attr('class', 'monthly-var')
+      .on('mouseover', event => {
+        try {
+          if (!stickyTooltip) {
+            // variance is the difference between currAvg and the baseTemp, month is 0-indexed, and year is a Date() instance.
+            clearTimeout(fadeOutTimer);
+
+            let { variance, month, year } = event.target.__data__,
+              { x, y } = event.target.getBoundingClientRect();
+            year = year.getFullYear();
+            // getBoundingClientRect() is inconsistent, since its result depends on the current scroll position; to make its return value independent, we add the respective viewport displacement.
+            x += window.scrollX;
+            y += window.scrollY;
+
+            let tooltipHTML = `${monthFormat(
+              new Date(1970, month)
+            )} of ${year}.<br><br>Average temperature of ~<strong>${roundHundredth(
+              baseTemperature + variance
+            )}°C</strong>. ${
+              variance === 0
+                ? '<br>Roughly equal to '
+                : `<br>~<strong>${Math.abs(
+                    roundHundredth(variance)
+                  )}°C</strong> ${
+                    variance < 0
+                      ? `<span style="color: blue;">colder 🥶</span> than`
+                      : `<span style="color: red;">hotter 🥵</span> than`
+                  }`
+            } 
+               the base temperature.`;
+
+            mainTooltip.innerHTML = tooltipHTML;
+
+            const { clientWidth: tooltipWidth, clientHeight: tooltipHeight } =
+              mainTooltip;
+
+            mainTooltip.style.left = `${
+              year < midYear ? x + 20 : x - tooltipWidth - 20
+            }px`;
+            // Not sure why the x and y values are so inconsistent; I have to subtract 80 instead of just 20 to put the tooltip above.
+            // - y changes for some reason; I'm checking if the tooltipHeight is also changing more than it should
+            mainTooltip.style.top = `${
+              month > 5 ? y - 20 : y - tooltipHeight - 80
+            }px`;
+
+            mainTooltip.animate(fadeInKeyframes, options);
+          }
+        } catch (err) {
+          alertErr(err);
+        }
+      })
+      .on('mouseout', event => {
+        if (
+          event.toElement &&
+          !event.toElement.classList.contains('monthly-var') &&
+          !stickyTooltip
+        )
+          fadeOutTimer = setTimeout(() => {
+            mainTooltip.animate(fadeOutKeyframes, options);
+          }, 1000);
+      })
+      .on('click', event => {
+        // Toggle the tooltip's stickiness, and highlight ONLY the current rect if sticky.
+        stickyTooltip = !stickyTooltip;
+        document
+          .querySelectorAll('.monthly-var.click-highlight')
+          .forEach(rect => rect.classList.remove('click-highlight'));
+        if (stickyTooltip) event.target.classList.add('click-highlight');
       });
+
+    // Legend.
+    let [minAvg, maxAvg] = d3.extent(
+      monthlyVariance,
+      instance => instance.variance + baseTemperature
+    );
+
+    // For each tick, render a rectangle depicting what color that value maps to.
+    const ticks = [];
+    for (let i = Math.floor(minAvg); i <= Math.ceil(maxAvg); i++) ticks.push(i);
+    const legendAxisLength = 350,
+      range = [padding.left, padding.left + legendAxisLength],
+      legendRectWidth = legendAxisLength / ticks.length,
+      legendRectHeight = 25;
+
+    const legendScale = d3.scaleBand(ticks, range),
+      legendAxis = d3.axisBottom(legendScale).tickFormat(val => val + '°C');
+
+    const legendAxisY = height - 35,
+      legendAxisX = 10 - padding.left;
+
+    d3svg
+      .append('g')
+      .attr('class', 'legend-axis')
+      .attr('transform', `translate(${legendAxisX}, ${legendAxisY})`)
+      .call(legendAxis)
+      .append('text')
+      .attr('class', 'axis-title legend-title')
+      .text('Monthly temperature average');
+
+    // Legend rects.
+    let legendTimer;
+    d3.select('.legend-axis')
+      .selectAll('rect')
+      .data(ticks)
+      .enter()
+      .append('rect')
+      .attr('class', 'legend-rect')
+      .attr('x', avgTemp => legendScale(avgTemp))
+      .attr('y', -legendRectHeight)
+      .attr('width', legendRectWidth)
+      .attr('height', legendRectHeight)
+      .attr('fill', avgTemp => colorScale(avgTemp - baseTemperature))
+      .on('mouseover', event => {
+        clearTimeout(legendTimer);
+
+        let { x } = event.target.getBoundingClientRect(),
+          avgTemp = event.target.__data__,
+          range = [avgTemp - 0.5, avgTemp + 0.49];
+        x += window.scrollX;
+
+        legendTooltip.innerHTML = `<strong>${range[0]}°C</strong> - <strong>${range[1]}°C</strong> average temp.`;
+
+        const {
+          clientWidth: legendTooltipWidth,
+          clientHeight: legendTooltipHeight,
+        } = legendTooltip;
+        legendTooltip.style.left = `${
+          avgTemp < 8 ? x : x - legendTooltipWidth + legendRectWidth
+        }px`;
+        legendTooltip.style.top = `${
+          legendAxisY - legendRectHeight - legendTooltipHeight
+        }px`;
+
+        legendTooltip.animate(fadeInKeyframes, options);
+
+        // Highlighting the respective rects.
+        const rectsInRange = Array.from(
+          document.querySelectorAll('.monthly-var')
+        ).filter(rect => {
+          const currAvg = roundHundredth(
+            rect.__data__.variance + baseTemperature
+          );
+          return currAvg >= range[0] && currAvg <= range[1];
+        });
+
+        rectsInRange.forEach(rect => rect.classList.add('highlight'));
+      })
+      .on('mouseout', event => {
+        Array.from(document.querySelectorAll('.highlight')).forEach(rect =>
+          rect.classList.remove('highlight')
+        );
+
+        if (
+          event.toElement &&
+          !event.toElement.classList.contains('legend-rect')
+        )
+          legendTimer = setTimeout(() => {
+            legendTooltip.animate(fadeOutKeyframes, options);
+            setTimeout(() => (legendTooltip.innerHTML = ''), 500);
+          }, 1000);
+      })
+      .on('click', event => {
+        // Toggle the rectangles within the indicated range, like my last project.
+        const legendRect = event.target,
+          avgTemp = legendRect.__data__,
+          range = [avgTemp - 0.5, avgTemp + 0.49],
+          rectsInRange = Array.from(
+            document.querySelectorAll('.monthly-var')
+          ).filter(rect => {
+            const currAvg = roundHundredth(
+              rect.__data__.variance + baseTemperature
+            );
+            return currAvg >= range[0] && currAvg <= range[1];
+          });
+
+        rectsInRange.forEach(rect => rect.classList.toggle('fade'));
+        legendRect.classList.toggle('fade');
+      });
+
+    // Footnotes.
+    d3graph
+      .append('text')
+      .attr('class', 'footnote')
+      .text('*Values rounded to the nearest hundredth.');
   })
-  .catch(err => console.error('❌', err));
+  .catch(err => alertErr(err));
