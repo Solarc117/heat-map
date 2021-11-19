@@ -192,8 +192,6 @@ d3.json(
             mainTooltip.style.left = `${
               year < midYear ? x + 20 : x - tooltipWidth - 20
             }px`;
-            // Not sure why the x and y values are so inconsistent; I have to subtract 80 instead of just 20 to put the tooltip above.
-            // - y changes for some reason; I'm checking if the tooltipHeight is also changing more than it should
             mainTooltip.style.top = `${
               month > 5 ? y - 20 : y - tooltipHeight - 80
             }px`;

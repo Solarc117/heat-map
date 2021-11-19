@@ -27,8 +27,8 @@ h3 {
 }
 
 .graph {
-  width: 100%;
-  height: 100vh; /* 100% wouldn't work here, since the parent node's height isn't defined (the body's). */
+  width: 887px; /* Equal to 100% width when zoom is 100%. */
+  height: 648px; /* Equal to 100vh height when zoom is 100%. */
   position: relative;
 }
 .graph > .canvas {
