@@ -193,7 +193,7 @@ d3.json(
               year < midYear ? x + 20 : x - tooltipWidth - 20
             }px`;
             mainTooltip.style.top = `${
-              month > 5 ? y - 20 : y - tooltipHeight - 80
+              month > 5 ? y - 30 : y - tooltipHeight * 2
             }px`;
 
             mainTooltip.animate(fadeInKeyframes, options);
@@ -222,6 +222,7 @@ d3.json(
       });
 
     // Legend.
+
     let [minAvg, maxAvg] = d3.extent(
       monthlyVariance,
       instance => instance.variance + baseTemperature
@@ -229,14 +230,17 @@ d3.json(
 
     // For each tick, render a rectangle depicting what color that value maps to.
     const ticks = [];
-    for (let i = Math.floor(minAvg); i <= Math.ceil(maxAvg); i++) ticks.push(i);
+    for (let i = Math.floor(minAvg); i < Math.ceil(maxAvg); i++)
+      ticks.push({ avgTemp: i, range: [i, i + 0.99] });
     const legendAxisLength = 350,
-      range = [padding.left, padding.left + legendAxisLength],
-      legendRectWidth = legendAxisLength / ticks.length,
+      axisDomain = [Math.floor(minAvg), Math.ceil(maxAvg)],
+      axisRange = [padding.left, padding.left + legendAxisLength],
+      numLegendRects = Math.ceil(maxAvg) - 1,
+      legendRectWidth = legendAxisLength / numLegendRects,
       legendRectHeight = 25;
 
-    const legendScale = d3.scaleBand(ticks, range),
-      legendAxis = d3.axisBottom(legendScale).tickFormat(val => val + '°C');
+    const legendScale = d3.scaleLinear(axisDomain, axisRange),
+      legendAxis = d3.axisBottom(legendScale);
 
     const legendAxisY = height - 35,
       legendAxisX = 10 - padding.left;
@@ -248,7 +252,7 @@ d3.json(
       .call(legendAxis)
       .append('text')
       .attr('class', 'axis-title legend-title')
-      .text('Monthly temperature average');
+      .text('Monthly temperature average (°C)');
 
     // Legend rects.
     let legendTimer;
@@ -258,17 +262,16 @@ d3.json(
       .enter()
       .append('rect')
       .attr('class', 'legend-rect')
-      .attr('x', avgTemp => legendScale(avgTemp))
+      .attr('x', data => legendScale(data.avgTemp))
       .attr('y', -legendRectHeight)
       .attr('width', legendRectWidth)
       .attr('height', legendRectHeight)
-      .attr('fill', avgTemp => colorScale(avgTemp - baseTemperature))
+      .attr('fill', data => colorScale(data.avgTemp - baseTemperature))
       .on('mouseover', event => {
         clearTimeout(legendTimer);
 
         let { x } = event.target.getBoundingClientRect(),
-          avgTemp = event.target.__data__,
-          range = [avgTemp - 0.5, avgTemp + 0.49];
+          { avgTemp, range } = event.target.__data__;
         x += window.scrollX;
 
         legendTooltip.innerHTML = `<strong>${range[0]}°C</strong> - <strong>${range[1]}°C</strong> average temp.`;
@@ -281,7 +284,7 @@ d3.json(
           avgTemp < 8 ? x : x - legendTooltipWidth + legendRectWidth
         }px`;
         legendTooltip.style.top = `${
-          legendAxisY - legendRectHeight - legendTooltipHeight
+          legendAxisY - legendRectHeight - legendTooltipHeight - 3
         }px`;
 
         legendTooltip.animate(fadeInKeyframes, options);
@@ -313,10 +316,9 @@ d3.json(
           }, 1000);
       })
       .on('click', event => {
-        // Toggle the rectangles within the indicated range, like my last project.
+        // Toggle the rectangles within the indicated range.
         const legendRect = event.target,
-          avgTemp = legendRect.__data__,
-          range = [avgTemp - 0.5, avgTemp + 0.49],
+          { range } = event.target.__data__,
           rectsInRange = Array.from(
             document.querySelectorAll('.monthly-var')
           ).filter(rect => {
