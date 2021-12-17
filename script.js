@@ -22,7 +22,7 @@ const yearFormat = d3.timeFormat('%Y'),
 const d3svg = d3.select('.canvas'),
   d3graph = d3.select('.graph');
 
-d3.select('.graph').append('div').attr('class', 'tooltip');
+d3graph.append('div').attr('class', 'tooltip');
 const mainTooltip = document.querySelector('.tooltip');
 
 const fadeInKeyframes = [
@@ -40,7 +40,7 @@ const fadeInKeyframes = [
     fill: 'forwards',
   };
 
-d3.select('.graph').append('div').attr('class', 'legend-tooltip');
+d3graph.append('div').attr('class', 'legend-tooltip');
 const legendTooltip = document.querySelector('.legend-tooltip');
 
 const colorSchemes = [
