@@ -1,7 +1,7 @@
-'use strict';
+'use strict'
 
 let { clientWidth: width, clientHeight: height } =
-  document.querySelector('.canvas');
+  document.querySelector('.canvas')
 
 const padding = {
     top: 25,
@@ -10,20 +10,20 @@ const padding = {
     left: 100,
   },
   innerWidth = width - padding.left - padding.right,
-  innerHeight = height - padding.top - padding.bottom;
+  innerHeight = height - padding.top - padding.bottom
 
 const xScale = d3.scaleTime(),
-  yScale = d3.scaleBand();
+  yScale = d3.scaleBand()
 
 const yearFormat = d3.timeFormat('%Y'),
   monthFormat = d3.timeFormat('%B'),
-  shortMonthFormat = d3.timeFormat('%b');
+  shortMonthFormat = d3.timeFormat('%b')
 
 const d3svg = d3.select('.canvas'),
-  d3graph = d3.select('.graph');
+  d3graph = d3.select('.graph')
 
-d3graph.append('div').attr('class', 'tooltip');
-const mainTooltip = document.querySelector('.tooltip');
+d3graph.append('div').attr('class', 'tooltip')
+const mainTooltip = document.querySelector('.tooltip')
 
 const fadeInKeyframes = [
     {
@@ -38,10 +38,10 @@ const fadeInKeyframes = [
   options = {
     duration: 500,
     fill: 'forwards',
-  };
+  }
 
-d3graph.append('div').attr('class', 'legend-tooltip');
-const legendTooltip = document.querySelector('.legend-tooltip');
+d3graph.append('div').attr('class', 'legend-tooltip')
+const legendTooltip = document.querySelector('.legend-tooltip')
 
 const colorSchemes = [
   ['darkblue', 'red'],
@@ -51,24 +51,24 @@ const colorSchemes = [
   ['blue', 'red'],
   ['blue', 'orangered'],
   ['darkblue', 'crimson'],
-];
+]
 
 function roundHundredth(arg) {
   if (isNaN(arg) || typeof arg !== 'number')
-    throw `Invalid argument ${arg}, typeof ${arg}`;
-  return Math.round(arg * 100) / 100;
+    throw `Invalid argument ${arg}, typeof ${arg}`
+  return Math.round(arg * 100) / 100
 }
 
 function alertErr(err) {
-  console.error('❌', err);
-  alert(`Something went wrong 😫 please refresh and try again.`);
+  console.error('❌', err)
+  alert(`Something went wrong 😫 please refresh and try again.`)
 }
 
-d3.json(
-  'https://raw.githubusercontent.com/freeCodeCamp/ProjectReferenceData/master/global-temperature.json'
-)
-  .then(data => {
-    const { baseTemperature, monthlyVariance } = data;
+;(async () => {
+  try {
+    const { baseTemperature, monthlyVariance } = await d3.json(
+      'https://raw.githubusercontent.com/freeCodeCamp/ProjectReferenceData/master/global-temperature.json'
+    )
 
     const numRects = monthlyVariance.length,
       // The reducer filters identical items out, which is used to determine how many rows and columns of rects will go in the innerArea, which is used to determine the rects' w/h.
@@ -83,30 +83,30 @@ d3.json(
       rows = Math.ceil(numRects / xAxisTicks),
       columns = Math.ceil(numRects / yAxisTicks),
       rectWidth = innerWidth / columns,
-      rectHeight = innerHeight / rows;
+      rectHeight = innerHeight / rows
 
     monthlyVariance.forEach(instance => {
-      instance.year = new Date(instance.year, 0);
-      instance.month--;
-    });
+      instance.year = new Date(instance.year, 0)
+      instance.month--
+    })
 
     const [minYear, maxYear] = d3.extent(monthlyVariance, instance =>
         instance.year.getFullYear()
       ),
       yearDiff = maxYear - minYear,
-      midYear = maxYear - yearDiff / 2;
+      midYear = maxYear - yearDiff / 2
 
-    xScale.domain(d3.extent(monthlyVariance, instance => instance.year));
+    xScale.domain(d3.extent(monthlyVariance, instance => instance.year))
     // Do I really need the rectWidth for the x range?
-    xScale.range([padding.left, padding.left + innerWidth - rectWidth]);
+    xScale.range([padding.left, padding.left + innerWidth - rectWidth])
 
-    yScale.domain([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
-    yScale.range([padding.top + innerHeight, padding.top]);
+    yScale.domain([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
+    yScale.range([padding.top + innerHeight, padding.top])
 
     const xAxis = d3.axisBottom(xScale).tickFormat(yearFormat),
       yAxis = d3
         .axisLeft(yScale)
-        .tickFormat(monthIndex => shortMonthFormat(new Date(1970, monthIndex)));
+        .tickFormat(monthIndex => shortMonthFormat(new Date(1970, monthIndex)))
 
     // Color scale.
     const colorScale = d3.scaleLinear(
@@ -119,7 +119,7 @@ d3.json(
       ['blue', 'red']
       // ['blue', 'orangered']
       // ['darkblue', 'crimson']
-    );
+    )
 
     // Axes.
     d3svg
@@ -129,7 +129,7 @@ d3.json(
       .call(xAxis)
       .append('text')
       .attr('class', 'axis-title x')
-      .text('Year');
+      .text('Year')
 
     d3svg
       .append('g')
@@ -138,11 +138,11 @@ d3.json(
       .call(yAxis)
       .append('text')
       .attr('class', 'axis-title y')
-      .text('Month');
+      .text('Month')
 
     // Rects and tooltip.
     let stickyTooltip = false,
-      fadeOutTimer;
+      fadeOutTimer
     d3svg
       .selectAll('rect')
       .data(monthlyVariance)
@@ -154,18 +154,18 @@ d3.json(
       .attr('height', rectHeight)
       .attr('fill', instance => colorScale(instance.variance))
       .attr('class', 'monthly-var')
-      .on('mouseover', event => {
+      .on('mouseover', ({ target }) => {
         try {
           if (!stickyTooltip) {
             // variance is the difference between currAvg and the baseTemp, month is 0-indexed, and year is a Date() instance.
-            clearTimeout(fadeOutTimer);
+            clearTimeout(fadeOutTimer)
 
-            let { variance, month, year } = event.target.__data__,
-              { x, y } = event.target.getBoundingClientRect();
-            year = year.getFullYear();
+            let { variance, month, year } = target.__data__,
+              { x, y } = target.getBoundingClientRect()
+            year = year.getFullYear()
             // getBoundingClientRect() is inconsistent, since its result depends on the current scroll position; to make its return value independent, we add the respective viewport displacement.
-            x += window.scrollX;
-            y += window.scrollY;
+            x += window.scrollX
+            y += window.scrollY
 
             let tooltipHTML = `${monthFormat(
               new Date(1970, month)
@@ -182,68 +182,68 @@ d3.json(
                       : `<span style="color: red;">hotter 🥵</span> than`
                   }`
             } 
-               the base temperature.`;
+               the base temperature.`
 
-            mainTooltip.innerHTML = tooltipHTML;
+            mainTooltip.innerHTML = tooltipHTML
 
             const { clientWidth: tooltipWidth, clientHeight: tooltipHeight } =
-              mainTooltip;
+              mainTooltip
 
             mainTooltip.style.left = `${
               year < midYear ? x + 20 : x - tooltipWidth - 20
-            }px`;
+            }px`
             mainTooltip.style.top = `${
               month > 5 ? y - 30 : y - tooltipHeight * 2
-            }px`;
+            }px`
 
-            mainTooltip.animate(fadeInKeyframes, options);
+            mainTooltip.animate(fadeInKeyframes, options)
           }
         } catch (err) {
-          alertErr(err);
+          alertErr(err)
         }
       })
-      .on('mouseout', event => {
+      .on('mouseout', ({ toElement }) => {
         if (
-          event.toElement &&
-          !event.toElement.classList.contains('monthly-var') &&
+          toElement &&
+          !toElement.classList.contains('monthly-var') &&
           !stickyTooltip
         )
           fadeOutTimer = setTimeout(() => {
-            mainTooltip.animate(fadeOutKeyframes, options);
-          }, 1000);
+            mainTooltip.animate(fadeOutKeyframes, options)
+          }, 1000)
       })
       .on('click', event => {
         // Toggle the tooltip's stickiness, and highlight ONLY the current rect if sticky.
-        stickyTooltip = !stickyTooltip;
+        stickyTooltip = !stickyTooltip
         document
           .querySelectorAll('.monthly-var.click-highlight')
-          .forEach(rect => rect.classList.remove('click-highlight'));
-        if (stickyTooltip) event.target.classList.add('click-highlight');
-      });
+          .forEach(rect => rect.classList.remove('click-highlight'))
+        if (stickyTooltip) event.target.classList.add('click-highlight')
+      })
 
     // Legend.
 
     let [minAvg, maxAvg] = d3.extent(
       monthlyVariance,
       instance => instance.variance + baseTemperature
-    );
+    )
 
     // For each tick, render a rectangle depicting what color that value maps to.
-    const ticks = [];
+    const ticks = []
     for (let i = Math.floor(minAvg); i < Math.ceil(maxAvg); i++)
-      ticks.push({ avgTemp: i, range: [i, i + 0.99] });
+      ticks.push({ avgTemp: i, range: [i, i + 0.99] })
     const legendAxisLength = 350,
       axisDomain = [Math.floor(minAvg), Math.ceil(maxAvg)],
       axisRange = [padding.left, padding.left + legendAxisLength],
       numLegendRects = Math.ceil(maxAvg) - 1,
       legendRectWidth = legendAxisLength / numLegendRects,
-      legendRectHeight = 25;
+      legendRectHeight = 25
 
     const legendScale = d3.scaleLinear(axisDomain, axisRange),
-      legendAxis = d3.axisBottom(legendScale);
+      legendAxis = d3.axisBottom(legendScale)
 
     const legendAxisY = height - 35,
-      legendAxisX = 10 - padding.left;
+      legendAxisX = 10 - padding.left
 
     d3svg
       .append('g')
@@ -252,10 +252,10 @@ d3.json(
       .call(legendAxis)
       .append('text')
       .attr('class', 'axis-title legend-title')
-      .text('Monthly temperature average (°C)');
+      .text('Monthly temperature average (°C)')
 
     // Legend rects.
-    let legendTimer;
+    let legendTimer
     d3.select('.legend-axis')
       .selectAll('rect')
       .data(ticks)
@@ -267,27 +267,27 @@ d3.json(
       .attr('width', legendRectWidth)
       .attr('height', legendRectHeight)
       .attr('fill', data => colorScale(data.avgTemp - baseTemperature))
-      .on('mouseover', event => {
-        clearTimeout(legendTimer);
+      .on('mouseover', ({ target }) => {
+        clearTimeout(legendTimer)
 
-        let { x } = event.target.getBoundingClientRect(),
-          { avgTemp, range } = event.target.__data__;
-        x += window.scrollX;
+        let { x } = target.getBoundingClientRect(),
+          { avgTemp, range } = target.__data__
+        x += window.scrollX
 
-        legendTooltip.innerHTML = `<strong>${range[0]}°C</strong> - <strong>${range[1]}°C</strong> average temp.`;
+        legendTooltip.innerHTML = `<strong>${range[0]}°C</strong> - <strong>${range[1]}°C</strong> average temp.`
 
         const {
           clientWidth: legendTooltipWidth,
           clientHeight: legendTooltipHeight,
-        } = legendTooltip;
+        } = legendTooltip
         legendTooltip.style.left = `${
           avgTemp < 8 ? x : x - legendTooltipWidth + legendRectWidth
-        }px`;
+        }px`
         legendTooltip.style.top = `${
           legendAxisY - legendRectHeight - legendTooltipHeight - 3
-        }px`;
+        }px`
 
-        legendTooltip.animate(fadeInKeyframes, options);
+        legendTooltip.animate(fadeInKeyframes, options)
 
         // Highlighting the respective rects.
         const rectsInRange = Array.from(
@@ -295,47 +295,46 @@ d3.json(
         ).filter(rect => {
           const currAvg = roundHundredth(
             rect.__data__.variance + baseTemperature
-          );
-          return currAvg >= range[0] && currAvg <= range[1];
-        });
+          )
+          return currAvg >= range[0] && currAvg <= range[1]
+        })
 
-        rectsInRange.forEach(rect => rect.classList.add('highlight'));
+        rectsInRange.forEach(rect => rect.classList.add('highlight'))
       })
-      .on('mouseout', event => {
+      .on('mouseout', ({ toElement }) => {
         Array.from(document.querySelectorAll('.highlight')).forEach(rect =>
           rect.classList.remove('highlight')
-        );
-
-        if (
-          event.toElement &&
-          !event.toElement.classList.contains('legend-rect')
         )
+
+        if (toElement && !toElement.classList.contains('legend-rect'))
           legendTimer = setTimeout(() => {
-            legendTooltip.animate(fadeOutKeyframes, options);
-            setTimeout(() => (legendTooltip.innerHTML = ''), 500);
-          }, 1000);
+            legendTooltip.animate(fadeOutKeyframes, options)
+            setTimeout(() => (legendTooltip.innerHTML = ''), 500)
+          }, 1000)
       })
-      .on('click', event => {
+      .on('click', ({ target }) => {
         // Toggle the rectangles within the indicated range.
-        const legendRect = event.target,
-          { range } = event.target.__data__,
+        const legendRect = target,
+          { range } = target.__data__,
           rectsInRange = Array.from(
             document.querySelectorAll('.monthly-var')
           ).filter(rect => {
             const currAvg = roundHundredth(
               rect.__data__.variance + baseTemperature
-            );
-            return currAvg >= range[0] && currAvg <= range[1];
-          });
+            )
+            return currAvg >= range[0] && currAvg <= range[1]
+          })
 
-        rectsInRange.forEach(rect => rect.classList.toggle('fade'));
-        legendRect.classList.toggle('fade');
-      });
+        rectsInRange.forEach(rect => rect.classList.toggle('fade'))
+        legendRect.classList.toggle('fade')
+      })
 
     // Footnotes.
     d3graph
       .append('text')
       .attr('class', 'footnote')
-      .text('*Values rounded to the nearest hundredth.');
-  })
-  .catch(err => alertErr(err));
+      .text('*Values rounded to the nearest hundredth.')
+  } catch (error) {
+    alertErr(error)
+  }
+})()
